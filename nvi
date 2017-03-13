@@ -1,0 +1,187 @@
+#!/bin/bash
+
+NVI_VERSION=1.0.0
+B=$(tput bold) # Bold
+N=$(tput sgr0) # Normal
+U=$(tput smul) # Underline
+
+function print_usage() {
+  cat << EOF
+${B}NAME${N}
+    Node.js Version Installer $NVI_VERSION - installs Node.js on your system.
+
+${B}SYNOPSIS${N}
+    ${U}nvi${N} [-h | --help]
+    ${U}nvi${N} [-v | --version]
+    ${U}nvi${N} [(-d | --download-directory) <directory>]
+        [(-e | --executable-directory) <directory>]
+        [(-i | --install-directory) <directory>]
+        [(-n | --node-version) <semver-string>]
+
+${B}DESCRIPTION${N}
+    Downloads Node.js and makes the node and npm executables available in a
+    separate directory. The specifics of which version of Node.js, the directory
+    containing Node.js, the directory containing the executables, and the
+    temporary directory storing the tar archive frome nodejs.org are all
+    configurable using options flags.
+
+    nvi saves executable files on your disk, which lets you put these files on
+    the \$PATH and refer to them in CI environments where bash functions and
+    other popular ways of providing node runtimes are cumbersome to work with.
+
+${B}OPTIONS${N}
+    ${U}Informational${N} (just print to stdout and exit)
+    -h, --help
+        Print this usage guide.
+    -v, --version
+        Print the currently installed version of nvi.
+
+    ${U}Operational${N} (will affect the installation)
+    -d, --download-directory
+        Make nvi store the temporary tar (which is later removed) in this
+        directory. Defaults to ${B}\$PWD${N}.
+    -e, --executable-directory
+        Make nvi link the node and npm executables in this directory. Defaults
+        to ${B}\$HOME/.local/bin${N}.
+    -i, --install-directory
+        Make nvi unpack the Node.js tar in this directory. Defaults to
+        ${B}\$HOME/.local${N}. This is not removed as the executables need it.
+    -n, --node-version
+        Make nvi install this version of Node.js. Defaults to reading
+        ${B}./package.json${N} and using the value of the property ${B}.engines.node${N}.
+
+${B}EXAMPLES${N}
+    The examples range from very explicit to very implicit. Each option can be
+    omitted, which in most cases just use a conservative fallback that should be
+    safe. In the case of the Node.js version, however, the fallback is to read
+    ${B}./package.json${N} to infer the version based on the property ${B}.engines.node${N}.
+    If you are specifying your Node.js version in some other way, you will have
+    to explicitly pass the version you want using ${U}--node-version${N}.
+
+    Install Node.js v6.10.0 in \$HOME/node with executables in \$HOME/node/bin,
+    using /tmp for the temporary tar file:
+
+        $ nvi -d /tmp -i \$HOME/node -e \$HOME/node/bin -n 6.10.0
+
+    Install Node.js v6.10.0 in \$HOME/node with executables in \$HOME/node/bin:
+
+        $ nvi -i \$HOME/node -b \$HOME/node/bin -n 6.10.0
+
+    Install Node.js in the default dirs (\$HOME/.local and \$HOME/.local/bin):
+
+        $ nvi -n 6.10.0
+
+    Install Node.js using package.json in the default dirs:
+
+        $ nvi
+
+${B}SEE ALSO${N}
+    ${U}nvm${N} (https://github.com/creationix/nvm)
+        A popular tool for managing Node.js versions during development. This
+        provides a lot more functionality in the "managing" section, but exposes
+        everything as bash functions, which can cause headaches in CI
+        environments. If your main concern is managing Node.js versions in your
+        local bash sessions on your own machine, this could be worth looking
+        into.
+
+EOF
+}
+
+function install_node() {
+  NODE_VERSION=$1
+  DOWNLOAD_DIR=$2
+  INSTALL_DIR=$3
+  BIN_DIR=$4
+  [ ! -d $DOWNLOAD_DIR ] && FRESH_DOWNLOAD_DIR=1
+
+  # Ensure the directories exist.
+  mkdir --parents -- $DOWNLOAD_DIR
+  mkdir --parents -- $INSTALL_DIR
+  mkdir --parents -- $BIN_DIR
+
+  # Download and extract the tar if it doesn't exist on disk.
+  if [[ ! -d "$INSTALL_DIR/node-v$NODE_VERSION-linux-x64" ]]; then
+    # Fail if version doesn't exist.
+    NODE_DIST_LOOKUP=$(wget -qO - https://nodejs.org/dist/index.json | grep --null-data --only-matching --perl-regex --text "\"version\"\s*:\s*\"v$NODE_VERSION\"")
+    [ -z "$NODE_DIST_LOOKUP" ] && >&2 echo "Error: Couldn't find Node.js version v$NODE_VERSION. Aborting." && exit 1
+    # Download and extract it if it does.
+    NODE_TAR="https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz"
+    wget --output-document=$DOWNLOAD_DIR/$NODE_VERSION.tar.gz --quiet $NODE_TAR
+    [ "$?" -ne 0 ] && >&2 echo "Error: Couldn't download $NODE_TAR to ${PWD}/$NODE_VERSION.tar.gz, but the version is valid. Possibly a network or permission issue. Aborting." && exit 1
+    tar --extract --file $DOWNLOAD_DIR/$NODE_VERSION.tar.gz --gzip --directory $INSTALL_DIR
+    rm -- $DOWNLOAD_DIR/$NODE_VERSION.tar.gz
+    # If the download dir was created by us and is now empty, remove it.
+    [ ! -z $FRESH_DOWNLOAD_DIR ] && [ -z "$(ls -A $DOWNLOAD_DIR)" ] && rm -d -- $DOWNLOAD_DIR
+  fi
+
+  # Install executables in the bin dir.
+  cp -- $INSTALL_DIR/node-v$NODE_VERSION-linux-x64/bin/node $BIN_DIR/node
+  ln --force --symbolic -- $(readlink --canonicalize $INSTALL_DIR/node-v$NODE_VERSION-linux-x64/bin/npm) $BIN_DIR/npm
+}
+
+function argument_parser() {
+  # Set defaults and override them depending on the supplied options.
+  NODE_VERSION=""
+  DOWNLOAD_DIR=$PWD
+  INSTALL_DIR="$HOME/.local"
+  BIN_DIR="$HOME/.local/bin"
+  while (( "$#" )); do
+    case "$1" in
+      -e|--executable-directory)
+        BIN_DIR=$2
+        shift 2
+        ;;
+      -d|--download-directory)
+        DOWNLOAD_DIR=$2
+        shift 2
+        ;;
+      -h|--help)
+        print_usage
+        exit 0
+        ;;
+      -i|--install-directory)
+        INSTALL_DIR=$2
+        shift 2
+        ;;
+      -n|--node-version)
+        NODE_VERSION=$2
+        shift 2
+        ;;
+      -v|--version)
+        echo "nvi $NVI_VERSION"
+        exit 0
+        ;;
+      -*|--*)
+        >&2 echo "Error: Unsupported flag: ${U}$1${N}. See ${U}nvi${N} ${U}--help${N}"
+        exit 1
+        ;;
+      *)
+        >&2 echo "Error: nvi doesn't take arguments apart from its options flags. See ${U}nvi${N} ${U}--help${N}"
+        exit 1
+        ;;
+    esac
+  done
+
+  # If no version was given, infer it from package.json.
+  if [[ -z "$NODE_VERSION" ]]; then
+    if [[ ! -f ./package.json ]]; then
+      >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json doesn't exist."
+      exit 1
+    fi
+    PACKAGE_JSON_VERSION=$(grep --null-data --only-matching --perl-regex --text '"engines":\s*{\s*"node":\s*"\K[^"]*' ./package.json)
+    if [[ $PACKAGE_JSON_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      NODE_VERSION=$PACKAGE_JSON_VERSION
+    else
+      if [[ -z $PACKAGE_JSON_VERSION ]]; then
+        >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json has no '.engines.node' property."
+      else
+        >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but '$PACKAGE_JSON_VERSION' is not a normal semver."
+      fi
+      exit 1
+    fi
+  fi
+
+  install_node $NODE_VERSION $DOWNLOAD_DIR $INSTALL_DIR $BIN_DIR
+}
+
+argument_parser $*
