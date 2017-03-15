@@ -124,15 +124,15 @@ function argument_parser() {
   NODE_VERSION=""
   DOWNLOAD_DIR=$PWD
   INSTALL_DIR="$HOME/.local"
-  BIN_DIR="$HOME/.local/bin"
+  EXEC_DIR="$HOME/.local/bin"
   while (( "$#" )); do
     case "$1" in
-      -e|--executable-directory)
-        BIN_DIR=$2
-        shift 2
-        ;;
       -d|--download-directory)
         DOWNLOAD_DIR=$2
+        shift 2
+        ;;
+      -e|--executable-directory)
+        EXEC_DIR=$2
         shift 2
         ;;
       -h|--help)
@@ -181,7 +181,7 @@ function argument_parser() {
     fi
   fi
 
-  install_node $NODE_VERSION $DOWNLOAD_DIR $INSTALL_DIR $BIN_DIR
+  install_node $NODE_VERSION $DOWNLOAD_DIR $INSTALL_DIR $EXEC_DIR
 }
 
 argument_parser $*

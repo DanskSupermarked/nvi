@@ -80,7 +80,7 @@ the necessary JavaScript source and executables. See `nvi --help`.
 
 If not told otherwise, `nvi` will attempt to read `./package.json` to infer the
 right version of Node.js to install. You need to either override this default
-using `--node-version` or make sure you `./package.json` file contains the
+using `--node-version` or make sure your `./package.json` file contains the
 following keys:
 
 ```json
