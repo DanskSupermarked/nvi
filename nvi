@@ -1,5 +1,9 @@
 #!/bin/bash
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
 NVI_VERSION=1.0.0
 B=$(tput bold) # Bold
 N=$(tput sgr0) # Normal
@@ -93,6 +97,7 @@ function install_node() {
   INSTALL_DIR=$3
   local PACKAGE="node-v${NODE_VERSION}-linux-x64"
   BIN_DIR=$4
+  local FRESH_DOWNLOAD_DIR=0
   [[ ! -d $DOWNLOAD_DIR ]] && FRESH_DOWNLOAD_DIR=1
 
   # Ensure the directories exist.
@@ -135,7 +140,7 @@ function install_node() {
       "$INSTALL_DIR"
     rm -- "$DOWNLOAD_DEST"
     # If the download dir was created by us and is now empty, remove it.
-    [[ ! -z $FRESH_DOWNLOAD_DIR ]] &&
+    [[ $FRESH_DOWNLOAD_DIR -eq 1 ]] &&
       [[ -z "$(ls -A "$DOWNLOAD_DIR")" ]] &&
       rm -d -- "$DOWNLOAD_DIR"
   fi
