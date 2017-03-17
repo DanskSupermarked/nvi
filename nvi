@@ -91,6 +91,7 @@ function install_node() {
   NODE_VERSION=$1
   DOWNLOAD_DIR=$2
   INSTALL_DIR=$3
+  local PACKAGE="node-v${NODE_VERSION}-linux-x64"
   BIN_DIR=$4
   [[ ! -d $DOWNLOAD_DIR ]] && FRESH_DOWNLOAD_DIR=1
 
@@ -100,7 +101,7 @@ function install_node() {
   mkdir --parents -- "$BIN_DIR"
 
   # Download and extract the tar if it doesn't exist on disk.
-  if [[ ! -d "$INSTALL_DIR/node-v$NODE_VERSION-linux-x64" ]]; then
+  if [[ ! -d "$INSTALL_DIR/$PACKAGE" ]]; then
     # Fail if version doesn't exist.
     local NODE_DIST_LOOKUP
     NODE_DIST_LOOKUP=$(wget -qO - https://nodejs.org/dist/index.json |
@@ -114,23 +115,25 @@ function install_node() {
       >&2 echo "Error: Couldn't find Node.js version v$NODE_VERSION. Aborting." &&
       exit 1
     # Download and extract it if it does.
-    NODE_TAR="https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz"
+    local ARCHIVE="$PACKAGE.tar.gz"
+    local DOWNLOAD_DEST="$DOWNLOAD_DIR/$ARCHIVE"
+    local NODE_TAR="https://nodejs.org/dist/v$NODE_VERSION/$ARCHIVE"
     if ! wget \
-      --output-document="$DOWNLOAD_DIR/$NODE_VERSION.tar.gz" \
+      --output-document="$DOWNLOAD_DEST" \
       --quiet \
       "$NODE_TAR"
     then
-      >&2 echo "Error: Couldn't download $NODE_TAR to ${PWD}/$NODE_VERSION.tar.gz, but the version is valid. Possibly a network or permission issue. Aborting."
+      >&2 echo "Error: Couldn't download $NODE_TAR to $DOWNLOAD_DEST, but the version is valid. Possibly a network or permission issue. Aborting."
       exit 1
     fi
     tar \
       --extract \
       --file \
-      "$DOWNLOAD_DIR/$NODE_VERSION.tar.gz" \
+      "$DOWNLOAD_DEST" \
       --gzip \
       --directory \
       "$INSTALL_DIR"
-    rm -- "$DOWNLOAD_DIR/$NODE_VERSION.tar.gz"
+    rm -- "$DOWNLOAD_DEST"
     # If the download dir was created by us and is now empty, remove it.
     [[ ! -z $FRESH_DOWNLOAD_DIR ]] &&
       [[ -z "$(ls -A "$DOWNLOAD_DIR")" ]] &&
@@ -138,13 +141,13 @@ function install_node() {
   fi
 
   # Install executables in the bin dir.
-  cp -- "$INSTALL_DIR/node-v$NODE_VERSION-linux-x64/bin/node" "$BIN_DIR/node"
+  cp -- "$INSTALL_DIR/$PACKAGE/bin/node" "$BIN_DIR/node"
   ln \
     --force \
     --symbolic \
     -- \
     "$(readlink --canonicalize \
-    "$INSTALL_DIR/node-v$NODE_VERSION-linux-x64/bin/npm")" \
+    "$INSTALL_DIR/$PACKAGE/bin/npm")" \
     "$BIN_DIR/npm"
 }
 
