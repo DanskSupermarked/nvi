@@ -91,6 +91,11 @@ ${B}SEE ALSO${N}
 EOF
 }
 
+fatal() {
+  1>&2 printf 'Error: %s\n' "$1"
+  exit 1
+}
+
 install_node() {
   NODE_VERSION=$1
   DOWNLOAD_DIR=$2
@@ -117,8 +122,8 @@ install_node() {
       --text
     )
     [[ -z "$NODE_DIST_LOOKUP" ]] &&
-      >&2 echo "Error: Couldn't find Node.js version v$NODE_VERSION. Aborting." &&
-      exit 1
+      fatal "Couldn't find Node.js version v$NODE_VERSION. Aborting."
+
     # Download and extract it if it does.
     local ARCHIVE="$PACKAGE.tar.gz"
     local DOWNLOAD_DEST="$DOWNLOAD_DIR/$ARCHIVE"
@@ -128,8 +133,7 @@ install_node() {
       --quiet \
       "$NODE_TAR"
     then
-      >&2 echo "Error: Couldn't download $NODE_TAR to $DOWNLOAD_DEST, but the version is valid. Possibly a network or permission issue. Aborting."
-      exit 1
+      fatal "Couldn't download $NODE_TAR to $DOWNLOAD_DEST, but the version is valid. Possibly a network or permission issue. Aborting."
     fi
     tar \
       --extract \
@@ -185,16 +189,14 @@ argument_parser() {
         shift 2
         ;;
       -v|--version)
-        echo "nvi $NVI_VERSION"
+        printf 'nvi %s\n' "$NVI_VERSION"
         exit 0
         ;;
       -*|--*)
-        >&2 echo "Error: Unsupported flag: ${U}$1${N}. See ${U}nvi${N} ${U}--help${N}"
-        exit 1
+        fatal "Error: Unsupported flag: ${U}$1${N}. See ${U}nvi${N} ${U}--help${N}"
         ;;
       *)
-        >&2 echo "Error: nvi doesn't take arguments apart from its options flags. See ${U}nvi${N} ${U}--help${N}"
-        exit 1
+        fatal "Error: nvi doesn't take arguments apart from its options flags. See ${U}nvi${N} ${U}--help${N}"
         ;;
     esac
   done
@@ -202,8 +204,7 @@ argument_parser() {
   # If no version was given, infer it from package.json.
   if [[ -z "$NODE_VERSION" ]]; then
     if [[ ! -f ./package.json ]]; then
-      >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json doesn't exist."
-      exit 1
+      fatal "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json doesn't exist."
     fi
     PACKAGE_JSON_VERSION=$(grep \
       --null-data \
@@ -216,11 +217,10 @@ argument_parser() {
       NODE_VERSION=$PACKAGE_JSON_VERSION
     else
       if [[ -z $PACKAGE_JSON_VERSION ]]; then
-        >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json has no '.engines.node' property."
+        fatal "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json has no '.engines.node' property."
       else
-        >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but '$PACKAGE_JSON_VERSION' is not a normal semver."
+        fatal "Error: Trying to infer the Node.js version from a package.json file, but '$PACKAGE_JSON_VERSION' is not a normal semver."
       fi
-      exit 1
     fi
   fi
 
