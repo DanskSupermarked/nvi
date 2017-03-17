@@ -113,15 +113,12 @@ install_node() {
   # Download and extract the tar if it doesn't exist on disk.
   if [[ ! -d "$INSTALL_DIR/$PACKAGE" ]]; then
     # Fail if version doesn't exist.
-    local NODE_DIST_LOOKUP
-    NODE_DIST_LOOKUP=$(wget -qO - https://nodejs.org/dist/index.json |
+    # --null-data: prevent grep from writing to stdout before wget finishes.
+    wget -qO - https://nodejs.org/dist/index.json |
     grep \
       --null-data \
-      --only-matching \
-      --perl-regex "\"version\"\s*:\s*\"v$NODE_VERSION\"" \
-      --text
-    )
-    [[ -z "$NODE_DIST_LOOKUP" ]] &&
+      --quiet \
+      --perl-regex "\"version\"\s*:\s*\"v$NODE_VERSION\"" ||
       fatal "Couldn't find Node.js version v$NODE_VERSION. Aborting."
 
     # Download and extract it if it does.
