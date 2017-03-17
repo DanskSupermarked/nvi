@@ -9,7 +9,7 @@ B=$(tput bold) # Bold
 N=$(tput sgr0) # Normal
 U=$(tput smul) # Underline
 
-function print_usage() {
+print_usage() {
   cat << EOF
 ${B}NAME${N}
     Node.js Version Installer $NVI_VERSION - installs Node.js on your system.
@@ -91,7 +91,7 @@ ${B}SEE ALSO${N}
 EOF
 }
 
-function install_node() {
+install_node() {
   NODE_VERSION=$1
   DOWNLOAD_DIR=$2
   INSTALL_DIR=$3
@@ -156,7 +156,7 @@ function install_node() {
     "$BIN_DIR/npm"
 }
 
-function argument_parser() {
+argument_parser() {
   # Set defaults and override them depending on the supplied options.
   NODE_VERSION=""
   DOWNLOAD_DIR=$PWD
