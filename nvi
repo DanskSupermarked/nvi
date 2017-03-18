@@ -140,9 +140,8 @@ install_node() {
       --directory \
       "$INSTALL_DIR"
     rm -- "$DOWNLOAD_DEST"
-    # If the download dir was created by us and is now empty, remove it.
+    # If the download dir was created by us, remove it.
     [[ $FRESH_DOWNLOAD_DIR -eq 1 ]] &&
-      [[ -z "$(ls -A "$DOWNLOAD_DIR")" ]] &&
       rm -d -- "$DOWNLOAD_DIR"
   fi
 
