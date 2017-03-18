@@ -146,14 +146,14 @@ install_node() {
       rm -d -- "$DOWNLOAD_DIR"
   fi
 
+  cd "$INSTALL_DIR/$PACKAGE"
   # Install executables in the bin dir.
-  cp -- "$INSTALL_DIR/$PACKAGE/bin/node" "$BIN_DIR/node"
+  cp -- "bin/node" "$BIN_DIR/node"
   ln \
     --force \
     --symbolic \
     -- \
-    "$(readlink --canonicalize \
-    "$INSTALL_DIR/$PACKAGE/bin/npm")" \
+    "$PWD/bin/npm" \
     "$BIN_DIR/npm"
 }
 
