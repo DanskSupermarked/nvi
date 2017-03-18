@@ -97,11 +97,11 @@ fatal() {
 }
 
 install_node() {
-  NODE_VERSION=$1
-  DOWNLOAD_DIR=$2
-  INSTALL_DIR=$3
+  local NODE_VERSION=$1
+  local DOWNLOAD_DIR=$2
+  local INSTALL_DIR=$3
   local PACKAGE="node-v${NODE_VERSION}-linux-x64"
-  BIN_DIR=$4
+  local BIN_DIR=$4
   local FRESH_DOWNLOAD_DIR=0
   [[ ! -d $DOWNLOAD_DIR ]] && FRESH_DOWNLOAD_DIR=1
 
@@ -158,10 +158,10 @@ install_node() {
 
 argument_parser() {
   # Set defaults and override them depending on the supplied options.
-  NODE_VERSION=""
-  DOWNLOAD_DIR=$PWD
-  INSTALL_DIR="$HOME/.local"
-  EXEC_DIR="$HOME/.local/bin"
+  local NODE_VERSION=""
+  local DOWNLOAD_DIR="$PWD"
+  local INSTALL_DIR="$HOME/.local"
+  local EXEC_DIR="$HOME/.local/bin"
   while (( "$#" )); do
     case "$1" in
       -d|--download-directory)
