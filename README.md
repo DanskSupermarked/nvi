@@ -8,7 +8,7 @@ OS | Will it work?
 -- | --
 GNU/Linux | :white_check_mark: **Yes**. Just ensure you have all the GNU software mentioned below.
 macOS | :warning: **Probably**. The coreutils shipped with OS X do not work, but you can install the GNU versions using [brew](https://brew.sh/).
-Windows | :question: **Unknown**: You can try in Bash for Windows with the GNU software listed below, but we've never done so.
+Windows | :white_check_mark: **With Bash for Windows, yes**. We've successfully used `nvi` in Bash for Windows. It works out of the box.
 
 In order to run, `nvi` assumes the following software is available:
 
