@@ -1,0 +1,113 @@
+= nvi(1)
+:manmanual: NVI
+:mansource: NVI
+
+== NAME
+
+nvi - Node.js Version Installer 1.0.0 - installs Node.js on your system.
+
+== SYNOPSIS
+
+*nvi* [-h | --help]
+    [-v | --version]
+    [(-d | --download-directory) <directory>]
+    [(-e | --executable-directory) <directory>]
+    [(-i | --install-directory) <directory>]
+    [(-n | --node-version) <semver-string>]
+
+== DESCRIPTION
+
+Downloads _Node.js_ and makes the *node* and *npm* executables available in a
+separate directory. The specifics of which version of Node.js, the directory
+containing Node.js, the directory containing the executables, and the temporary
+directory storing the tar archive frome nodejs.org are all configurable using
+options flags.
+
+*nvi* saves executable files on your disk, which lets you put these files on
+the _$PATH_ and refer to them in CI environments where bash functions and other
+popular ways of providing node runtimes are cumbersome to work with.
+
+== OPTIONS
+
+=== Informational (just print to stdout and exit)
+
+*-h*::
+*--help*::
+
+    Print this usage guide.
+
+*-v*::
+*--version*::
+
+    Print the currently installed version of nvi.
+
+=== Operational (will affect the installation)
+
+*-d*::
+*--download-directory*::
+
+    Make nvi store the temporary tar (which is later removed) in this
+    directory. Defaults to _$PWD_.
+
+*-e*::
+*--executable-directory*::
+
+    Make nvi link the node and npm executables in this directory. Defaults
+    to _$HOME/.local/bin_.
+
+*-i*::
+*--install-directory*::
+
+    Make nvi unpack the Node.js tar in this directory. Defaults to
+    _$HOME/.local_. This is not removed as the executables need it.
+
+*-n*::
+*--node-version*::
+
+    Make nvi install this version of Node.js. Defaults to reading
+    _./package.json_ and using the value of the property _.engines.node_.
+
+== EXAMPLES
+
+The examples range from very explicit to very implicit. Each option can be
+omitted, which in most cases just use a conservative fallback that should be
+safe. In the case of the Node.js version, however, the fallback is to read
+_./package.json_ to infer the version based on the property _.engines.node_.
+If you are specifying your Node.js version in some other way, you will have
+to explicitly pass the version you want using *--node-version*.
+
+Install Node.js v6.10.0 in _$HOME/node_ with executables in _$HOME/node/bin_,
+using _/tmp_ for the temporary tar file:
+
+----
+$ nvi -d /tmp -i $HOME/node -e $HOME/node/bin -n 6.10.0
+----
+
+Install Node.js v6.10.0 in _$HOME/node_ with executables in _$HOME/node/bin_:
+
+----
+$ nvi -i $HOME/node -b $HOME/node/bin -n 6.10.0
+----
+
+Install Node.js in the default dirs (_$HOME/.local_ and _$HOME/.local/bin_):
+
+----
+$ nvi -n 6.10.0
+----
+
+Install Node.js using _package.json_ in the default dirs:
+
+----
+$ nvi
+----
+
+== SEE ALSO
+
+_nvm_ https://github.com/creationix/nvm
+    A popular tool for managing Node.js versions during development. This
+    provides a lot more functionality in the "managing" section, but
+    exposes everything as bash functions, which can cause headaches in CI
+    environments. If your main concern is managing Node.js versions in your
+    local bash sessions on your own machine, this could be worth looking
+    into.
+
