@@ -1,11 +1,15 @@
 #!/bin/bash
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
 NVI_VERSION=1.0.0
 B=$(tput bold) # Bold
 N=$(tput sgr0) # Normal
 U=$(tput smul) # Underline
 
-function print_usage() {
+print_usage() {
   cat << EOF
 ${B}NAME${N}
     Node.js Version Installer $NVI_VERSION - installs Node.js on your system.
@@ -87,12 +91,18 @@ ${B}SEE ALSO${N}
 EOF
 }
 
-function install_node() {
-  NODE_VERSION=$1
-  DOWNLOAD_DIR=$2
-  INSTALL_DIR=$3
+fatal() {
+  1>&2 printf 'Error: %s\n' "$1"
+  exit 1
+}
+
+install_node() {
+  local NODE_VERSION=$1
+  local DOWNLOAD_DIR=$2
+  local INSTALL_DIR=$3
   local PACKAGE="node-v${NODE_VERSION}-linux-x64"
-  BIN_DIR=$4
+  local BIN_DIR=$4
+  local FRESH_DOWNLOAD_DIR=0
   [[ ! -d $DOWNLOAD_DIR ]] && FRESH_DOWNLOAD_DIR=1
 
   # Ensure the directories exist.
@@ -103,17 +113,14 @@ function install_node() {
   # Download and extract the tar if it doesn't exist on disk.
   if [[ ! -d "$INSTALL_DIR/$PACKAGE" ]]; then
     # Fail if version doesn't exist.
-    local NODE_DIST_LOOKUP
-    NODE_DIST_LOOKUP=$(wget -qO - https://nodejs.org/dist/index.json |
+    # --null-data: prevent grep from writing to stdout before wget finishes.
+    wget -qO - https://nodejs.org/dist/index.json |
     grep \
       --null-data \
-      --only-matching \
-      --perl-regex "\"version\"\s*:\s*\"v$NODE_VERSION\"" \
-      --text
-    )
-    [[ -z "$NODE_DIST_LOOKUP" ]] &&
-      >&2 echo "Error: Couldn't find Node.js version v$NODE_VERSION. Aborting." &&
-      exit 1
+      --quiet \
+      --perl-regex "\"version\"\s*:\s*\"v$NODE_VERSION\"" ||
+      fatal "Couldn't find Node.js version v$NODE_VERSION. Aborting."
+
     # Download and extract it if it does.
     local ARCHIVE="$PACKAGE.tar.gz"
     local DOWNLOAD_DEST="$DOWNLOAD_DIR/$ARCHIVE"
@@ -123,8 +130,7 @@ function install_node() {
       --quiet \
       "$NODE_TAR"
     then
-      >&2 echo "Error: Couldn't download $NODE_TAR to $DOWNLOAD_DEST, but the version is valid. Possibly a network or permission issue. Aborting."
-      exit 1
+      fatal "Couldn't download $NODE_TAR to $DOWNLOAD_DEST, but the version is valid. Possibly a network or permission issue. Aborting."
     fi
     tar \
       --extract \
@@ -134,29 +140,28 @@ function install_node() {
       --directory \
       "$INSTALL_DIR"
     rm -- "$DOWNLOAD_DEST"
-    # If the download dir was created by us and is now empty, remove it.
-    [[ ! -z $FRESH_DOWNLOAD_DIR ]] &&
-      [[ -z "$(ls -A "$DOWNLOAD_DIR")" ]] &&
+    # If the download dir was created by us, remove it.
+    [[ $FRESH_DOWNLOAD_DIR -eq 1 ]] &&
       rm -d -- "$DOWNLOAD_DIR"
   fi
 
+  cd "$INSTALL_DIR/$PACKAGE"
   # Install executables in the bin dir.
-  cp -- "$INSTALL_DIR/$PACKAGE/bin/node" "$BIN_DIR/node"
+  cp -- "bin/node" "$BIN_DIR/node"
   ln \
     --force \
     --symbolic \
     -- \
-    "$(readlink --canonicalize \
-    "$INSTALL_DIR/$PACKAGE/bin/npm")" \
+    "$PWD/bin/npm" \
     "$BIN_DIR/npm"
 }
 
-function argument_parser() {
+argument_parser() {
   # Set defaults and override them depending on the supplied options.
-  NODE_VERSION=""
-  DOWNLOAD_DIR=$PWD
-  INSTALL_DIR="$HOME/.local"
-  EXEC_DIR="$HOME/.local/bin"
+  local NODE_VERSION=""
+  local DOWNLOAD_DIR="$PWD"
+  local INSTALL_DIR="$HOME/.local"
+  local EXEC_DIR="$HOME/.local/bin"
   while (( "$#" )); do
     case "$1" in
       -d|--download-directory)
@@ -180,16 +185,14 @@ function argument_parser() {
         shift 2
         ;;
       -v|--version)
-        echo "nvi $NVI_VERSION"
+        printf 'nvi %s\n' "$NVI_VERSION"
         exit 0
         ;;
       -*|--*)
-        >&2 echo "Error: Unsupported flag: ${U}$1${N}. See ${U}nvi${N} ${U}--help${N}"
-        exit 1
+        fatal "Error: Unsupported flag: ${U}$1${N}. See ${U}nvi${N} ${U}--help${N}"
         ;;
       *)
-        >&2 echo "Error: nvi doesn't take arguments apart from its options flags. See ${U}nvi${N} ${U}--help${N}"
-        exit 1
+        fatal "Error: nvi doesn't take arguments apart from its options flags. See ${U}nvi${N} ${U}--help${N}"
         ;;
     esac
   done
@@ -197,8 +200,7 @@ function argument_parser() {
   # If no version was given, infer it from package.json.
   if [[ -z "$NODE_VERSION" ]]; then
     if [[ ! -f ./package.json ]]; then
-      >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json doesn't exist."
-      exit 1
+      fatal "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json doesn't exist."
     fi
     PACKAGE_JSON_VERSION=$(grep \
       --null-data \
@@ -211,11 +213,10 @@ function argument_parser() {
       NODE_VERSION=$PACKAGE_JSON_VERSION
     else
       if [[ -z $PACKAGE_JSON_VERSION ]]; then
-        >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json has no '.engines.node' property."
+        fatal "Error: Trying to infer the Node.js version from a package.json file, but ${PWD}/package.json has no '.engines.node' property."
       else
-        >&2 echo "Error: Trying to infer the Node.js version from a package.json file, but '$PACKAGE_JSON_VERSION' is not a normal semver."
+        fatal "Error: Trying to infer the Node.js version from a package.json file, but '$PACKAGE_JSON_VERSION' is not a normal semver."
       fi
-      exit 1
     fi
   fi
 
