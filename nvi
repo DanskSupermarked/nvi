@@ -110,6 +110,8 @@ install_node() {
   mkdir --parents -- "$INSTALL_DIR"
   mkdir --parents -- "$BIN_DIR"
 
+  [[ ! $BIN_DIR = /* ]] && BIN_DIR="$PWD/$BIN_DIR"
+
   # Download and extract the tar if it doesn't exist on disk.
   if [[ ! -d "$INSTALL_DIR/$PACKAGE" ]]; then
     # Fail if version doesn't exist.
