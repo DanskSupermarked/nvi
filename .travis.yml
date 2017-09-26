@@ -9,4 +9,5 @@ before_install:
   - docker pull koalaman/shellcheck:latest
 
 script:
-  - docker run --volume $PWD:/scripts koalaman/shellcheck /scripts/nvi
+  - docker run --volume $PWD:/scripts koalaman/shellcheck /scripts/nvi /scripts/test-nvi
+  - ./test-nvi

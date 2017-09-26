@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# Environment variables:
+#
+# NVI: the path to the nvi binary to use.
+# - Default is the binary from the repository.
+# NODE_VERSION: a Node.js version number to retrieve.
+# - Default is "0.10.0", a very small package with the expected file structure.
+
+set -o errexit
+set -o nounset
+
+readonly NVI="${NVI:-$PWD/nvi}"
+readonly some_node_version="${NODE_VERSION:-0.10.0}"
+
+failed=0
+
+fail() {
+  printf "error: %s\n" "$1"
+  failed=1
+}
+
+run_in() {
+  local -r ctx="$1"
+  local -r download_dir="$ctx/d"
+  local -r install_dir="$ctx/i"
+  local -r exec_dir="$ctx/e"
+
+  printf '%s (%s)\n' "$2" "$ctx"
+
+  local -r node_bin="$exec_dir/node"
+  local -r npm_link="$exec_dir/npm"
+  local -r package_dir="$install_dir/node-v${some_node_version}-linux-x64"
+
+  "$NVI" \
+    --download-directory "$download_dir" \
+    --install-directory "$install_dir" \
+    --executable-directory "$exec_dir" \
+    --node-version "$some_node_version"
+
+  [[ ! -d $download_dir ]] ||
+    fail "fresh download directory '$download_dir' not removed"
+
+  [[ -d $package_dir ]] || fail "no installed package '$package_dir'"
+
+  [[ -f $node_bin ]] || fail "no file '$node_bin'"
+  [[ -x $node_bin ]] || fail "not executable '$node_bin'"
+
+  [[ -f $npm_link ]] || fail "no file '$npm_link'"
+  [[ -L $npm_link ]] || fail "not symlink '$npm_link'"
+}
+
+readonly tmpdir="$(mktemp --directory)"
+trap 'rm -r $tmpdir' EXIT
+
+run_in "$(mktemp --directory --tmpdir="$tmpdir" tmp.XXX)" "absolute paths"
+
+cd "$(mktemp --directory --tmpdir="$tmpdir" tmp.XXX)"
+run_in "." "relative paths"
+
+exit $failed
