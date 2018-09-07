@@ -16,7 +16,7 @@ readonly some_node_version="${NODE_VERSION:-0.10.0}"
 failed=0
 
 fail() {
-  printf "error: %s\n" "$1"
+  printf "error: %s\\n" "$1"
   failed=1
 }
 
@@ -44,10 +44,12 @@ run_in() {
   [[ -d $package_dir ]] || fail "no installed package '$package_dir'"
 
   [[ -f $node_bin ]] || fail "no file '$node_bin'"
+  [[ -L $node_bin ]] || fail "not symlink '$node_bin'"
   [[ -x $node_bin ]] || fail "not executable '$node_bin'"
 
   [[ -f $npm_link ]] || fail "no file '$npm_link'"
   [[ -L $npm_link ]] || fail "not symlink '$npm_link'"
+  [[ -x $npm_link ]] || fail "not executable '$npm_link'"
 }
 
 readonly tmpdir="$(mktemp --directory)"

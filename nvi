@@ -98,19 +98,22 @@ fatal() {
 
 install_node() {
   local NODE_VERSION=$1
-  local DOWNLOAD_DIR=$2
-  local INSTALL_DIR=$3
+  local DOWNLOAD_DIR
+  DOWNLOAD_DIR=$(readlink --canonicalize-missing "$2")
+  local INSTALL_DIR
+  INSTALL_DIR=$(readlink --canonicalize-missing "$3")
+  local EXEC_DIR
+  EXEC_DIR=$(readlink --canonicalize-missing "$4")
   local PACKAGE="node-v${NODE_VERSION}-linux-x64"
-  local BIN_DIR=$4
   local FRESH_DOWNLOAD_DIR=0
   [[ ! -d $DOWNLOAD_DIR ]] && FRESH_DOWNLOAD_DIR=1
 
   # Ensure the directories exist.
   mkdir --parents -- "$DOWNLOAD_DIR"
   mkdir --parents -- "$INSTALL_DIR"
-  mkdir --parents -- "$BIN_DIR"
+  mkdir --parents -- "$EXEC_DIR"
 
-  [[ ! $BIN_DIR = /* ]] && BIN_DIR="$PWD/$BIN_DIR"
+  [[ ! $EXEC_DIR = /* ]] && EXEC_DIR="$PWD/$EXEC_DIR"
 
   # Download and extract the tar if it doesn't exist on disk.
   if [[ ! -d "$INSTALL_DIR/$PACKAGE" ]]; then
@@ -120,7 +123,7 @@ install_node() {
     grep \
       --null-data \
       --quiet \
-      --perl-regex "\"version\"\s*:\s*\"v$NODE_VERSION\"" ||
+      "\"version\"\\s*:\\s*\"v$NODE_VERSION\"" ||
       fatal "Couldn't find Node.js version v$NODE_VERSION. Aborting."
 
     # Download and extract it if it does.
@@ -149,13 +152,24 @@ install_node() {
 
   cd "$INSTALL_DIR/$PACKAGE"
   # Install executables in the bin dir.
-  cp -- "bin/node" "$BIN_DIR/node"
-  ln \
+  if ln \
     --force \
     --symbolic \
     -- \
-    "$PWD/bin/npm" \
-    "$BIN_DIR/npm"
+    "$INSTALL_DIR/$PACKAGE/bin/node" \
+    "$EXEC_DIR/node"
+  then
+    ln \
+      --force \
+      --symbolic \
+      -- \
+      "$INSTALL_DIR/$PACKAGE/bin/npm" \
+      "$EXEC_DIR/npm"
+  else
+    fatal "Couldn't write to symlink \"$EXEC_DIR/node\". Possibly a permission issue. Aborting."
+  fi
+
+  echo "Successfully installed Node.js version \"$NODE_VERSION\"."
 }
 
 argument_parser() {
@@ -190,7 +204,7 @@ argument_parser() {
         printf 'nvi %s\n' "$NVI_VERSION"
         exit 0
         ;;
-      -*|--*)
+      -*)
         fatal "Error: Unsupported flag: ${U}$1${N}. See ${U}nvi${N} ${U}--help${N}"
         ;;
       *)
@@ -207,10 +221,10 @@ argument_parser() {
     PACKAGE_JSON_VERSION=$(grep \
       --null-data \
       --only-matching \
-      --perl-regex \
       --text \
       '"engines":\s*{\s*"node":\s*"\K[^"]*' \
-      ./package.json)
+      ./package.json |
+      tr '\0' '\n')
     if [[ $PACKAGE_JSON_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
       NODE_VERSION=$PACKAGE_JSON_VERSION
     else
