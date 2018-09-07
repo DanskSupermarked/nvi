@@ -7,18 +7,16 @@ A command-line tool to make Node.js binaries available in CI environments.
 OS | Will it work?
 -- | --
 GNU/Linux | :white_check_mark: **Yes**. Just ensure you have all the GNU software mentioned below.
-macOS | :warning: **Probably**. The coreutils shipped with OS X do not work, but you can install the GNU versions using [brew](https://brew.sh/).
-Windows | :white_check_mark: **With Bash for Windows, yes**. We've successfully used `nvi` in Bash for Windows. It works out of the box.
+macOS | :warning: **With some effort**. The coreutils shipped with OS X do not work, but you can install the GNU versions using [brew](https://brew.sh/).
+Windows | :warning: **With Bash for Windows, yes**. We've successfully used `nvi` in Bash for Windows. It works out of the box.
 
 In order to run, `nvi` assumes the following software is available:
 
 *   GNU coreutils
 *   Other GNU software: `bash`, `grep`, `tar`, `tput`, `wget`
 
-These are available in most GNU/Linux distributions and certainly through their
+These are available in many GNU/Linux distributions and certainly through their
 various package managers.
-
-**Note**: `nvi` is tested on Ubuntu 16.04 and only Ubuntu 16.04.
 
 ## Can't I just use nvm?
 

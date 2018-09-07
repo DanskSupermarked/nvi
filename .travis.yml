@@ -6,7 +6,7 @@ services:
   - docker
 
 before_install:
-  - docker pull koalaman/shellcheck:latest
+  - docker pull koalaman/shellcheck:v0.5.0
 
 script:
   - docker run --volume $PWD:/scripts koalaman/shellcheck /scripts/nvi /scripts/test-nvi
