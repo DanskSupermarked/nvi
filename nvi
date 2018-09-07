@@ -221,6 +221,7 @@ argument_parser() {
     PACKAGE_JSON_VERSION=$(grep \
       --null-data \
       --only-matching \
+      --perl-regexp \
       --text \
       '"engines":\s*{\s*"node":\s*"\K[^"]*' \
       ./package.json |
