@@ -165,6 +165,14 @@ install_node() {
       -- \
       "$INSTALL_DIR/$PACKAGE/bin/npm" \
       "$EXEC_DIR/npm"
+    # npx has only been included since npm 5.2.0 so we avoid creating a link to it if it does not exist.
+    [[ -f "$INSTALL_DIR/$PACKAGE/bin/npx" ]] &&
+      ln \
+        --force \
+        --symbolic \
+        -- \
+        "$INSTALL_DIR/$PACKAGE/bin/npx" \
+        "$EXEC_DIR/npx"
   else
     fatal "Couldn't write to symlink \"$EXEC_DIR/node\". Possibly a permission issue. Aborting."
   fi
