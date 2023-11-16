@@ -52,7 +52,8 @@ run_in() {
   [[ -x $npm_link ]] || fail "not executable '$npm_link'"
 }
 
-readonly tmpdir="$(mktemp --directory)"
+tmpdir="$(mktemp --directory)"
+readonly tmpdir
 trap 'rm -r $tmpdir' EXIT
 
 run_in "$(mktemp --directory --tmpdir="$tmpdir" tmp.XXX)" "absolute paths"
