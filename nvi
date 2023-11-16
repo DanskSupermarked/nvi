@@ -21,6 +21,7 @@ ${B}SYNOPSIS${N}
         [(-e | --executable-directory) <directory>]
         [(-i | --install-directory) <directory>]
         [(-n | --node-version) <semver-string>]
+        [(-o | --origin) <URL>]
 
 ${B}DESCRIPTION${N}
     Downloads Node.js and makes the node and npm executables available in a
@@ -53,6 +54,12 @@ ${B}OPTIONS${N}
     -n, --node-version
         Make nvi install this version of Node.js. Defaults to reading
         ${B}./package.json${N} and using the value of the property ${B}.engines.node${N}.
+    -o, --origin
+        Download Node.js binary from this origin. This lets you inject a cache
+        in front of the official domain with the primary motivation of avoiding
+        rate limits and potentially limiting the breadth of versions available.
+        Defaults to the ${B}\$NVI_NODE_ORIGIN${N} environment variable if it is set.
+        Defaults to ${B}https://nodejs.org${N} if not.
 
 ${B}EXAMPLES${N}
     The examples range from very explicit to very implicit. Each option can be
@@ -97,13 +104,14 @@ fatal() {
 }
 
 install_node() {
-  local NODE_VERSION=$1
+  local NODE_ORIGIN=$1
+  local NODE_VERSION=$2
   local DOWNLOAD_DIR
-  DOWNLOAD_DIR=$(readlink --canonicalize-missing "$2")
+  DOWNLOAD_DIR=$(readlink --canonicalize-missing "$3")
   local INSTALL_DIR
-  INSTALL_DIR=$(readlink --canonicalize-missing "$3")
+  INSTALL_DIR=$(readlink --canonicalize-missing "$4")
   local EXEC_DIR
-  EXEC_DIR=$(readlink --canonicalize-missing "$4")
+  EXEC_DIR=$(readlink --canonicalize-missing "$5")
   local PACKAGE="node-v${NODE_VERSION}-linux-x64"
   local FRESH_DOWNLOAD_DIR=0
   [[ ! -d $DOWNLOAD_DIR ]] && FRESH_DOWNLOAD_DIR=1
@@ -119,7 +127,7 @@ install_node() {
   if [[ ! -d "$INSTALL_DIR/$PACKAGE" ]]; then
     # Fail if version doesn't exist.
     # --null-data: prevent grep from writing to stdout before wget finishes.
-    wget -qO - https://nodejs.org/dist/index.json |
+    wget -qO - "$NODE_ORIGIN/dist/index.json" |
     grep \
       --null-data \
       --quiet \
@@ -129,7 +137,7 @@ install_node() {
     # Download and extract it if it does.
     local ARCHIVE="$PACKAGE.tar.gz"
     local DOWNLOAD_DEST="$DOWNLOAD_DIR/$ARCHIVE"
-    local NODE_TAR="https://nodejs.org/dist/v$NODE_VERSION/$ARCHIVE"
+    local NODE_TAR="$NODE_ORIGIN/dist/v$NODE_VERSION/$ARCHIVE"
     if ! wget \
       --output-document="$DOWNLOAD_DEST" \
       --quiet \
@@ -183,6 +191,7 @@ install_node() {
 argument_parser() {
   # Set defaults and override them depending on the supplied options.
   local NODE_VERSION=""
+  local NODE_ORIGIN="${NVI_NODE_ORIGIN:-https://nodejs.org}"
   local DOWNLOAD_DIR="$PWD"
   local INSTALL_DIR="$HOME/.local"
   local EXEC_DIR="$HOME/.local/bin"
@@ -206,6 +215,10 @@ argument_parser() {
         ;;
       -n|--node-version)
         NODE_VERSION=$2
+        shift 2
+        ;;
+      -o|--origin)
+        NODE_ORIGIN=$2
         shift 2
         ;;
       -v|--version)
@@ -245,7 +258,7 @@ argument_parser() {
     fi
   fi
 
-  install_node "$NODE_VERSION" "$DOWNLOAD_DIR" "$INSTALL_DIR" "$EXEC_DIR"
+  install_node "$NODE_ORIGIN" "$NODE_VERSION" "$DOWNLOAD_DIR" "$INSTALL_DIR" "$EXEC_DIR"
 }
 
 argument_parser "$@"
